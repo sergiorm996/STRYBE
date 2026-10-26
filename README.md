@@ -9,6 +9,8 @@ Tracker de entrenamiento PWA para el Entrenamiento 4.0 (bloque de acumulación d
 - **Temporizador de descanso** automático al marcar cada serie (vibración + pitido), pantalla siempre encendida.
 - **Récords** (1RM estimado) y pantalla de **Progreso** por ejercicio.
 - **Historial** con detalle, filtros y borrado; descanso con "Deshacer".
+- **Ejercicios con estado** (v2.1): en cada ejercicio puedes marcar **No lo hice** (con motivo), **Sustituir** por otro (máquina ocupada) o añadir un **ejercicio puntual** solo para ese día, sin tocar la rutina. Los ejercicios nuevos que crees se guardan en tu catálogo con su músculo.
+- Los ejercicios sin series marcadas se guardan como *no realizados*: no cuentan como 0 en tu progreso.
 - **Copia de seguridad**: exportar (compartir en iPhone) e importar `.json`.
 - Funciona **offline** después de la primera carga.
 

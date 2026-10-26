@@ -3,7 +3,7 @@
      (la versión nueva aparece la siguiente vez que abras la app).
    - Librerías del CDN (versión fijada, no cambian): caché primero.
    Sube CACHE (strybe-vN) cuando cambies este archivo o la lista de librerías. */
-const CACHE = 'strybe-v3';
+const CACHE = 'strybe-v4';
 
 const LOCAL = [
   './', './index.html', './manifest.webmanifest',

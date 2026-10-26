@@ -425,6 +425,29 @@
   .boot-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.12); border-top-color: var(--lime); animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ---------- Estados de ejercicio (no lo hice / sustituto / puntual) ---------- */
+  .ex-actions { display: flex; gap: 9px; margin-bottom: 14px; }
+  .ex-act { flex: 1; padding: 11px 10px; border-radius: 13px; font-size: 13px; font-weight: 600; color: var(--text-dim);
+    background: var(--card-1); border: 1px solid var(--stroke); min-height: 44px; }
+  .ex-act.danger { color: #fff; background: rgba(244,63,94,0.35); border-color: rgba(244,63,94,0.55); }
+  .ex-dot.skip { opacity: 0.45; border-style: dashed; text-decoration: line-through; }
+  .ex-dot.extra:not(.cur) { border-color: rgba(34,211,238,0.45); color: var(--cyan-b); }
+  .skip-card { display: flex; align-items: center; gap: 14px; border-color: rgba(251,146,60,0.3); }
+  .sub-box { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 12px 14px; margin-bottom: 14px;
+    border-radius: 16px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); }
+  .sub-box .eyebrow { color: #C4B5FD; }
+  .tag { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 7px; font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 2px; }
+  .tag.extra { color: var(--cyan-b); background: rgba(34,211,238,0.12); }
+  .tag.sub { color: #C4B5FD; background: rgba(139,92,246,0.16); }
+  .fin-ex.is-skip { opacity: 0.6; }
+  .fin-ex.is-skip .fin-ex-n { color: var(--text-faint); }
+  .pick-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;
+    padding: 14px 16px; min-height: 48px; margin-bottom: 8px; border-radius: 15px; background: var(--card-1); border: 1px solid var(--stroke); font-size: 14.5px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .mchip { padding: 9px 12px; border-radius: 11px; font-size: 13px; font-weight: 600; background: var(--card-2); border: 1px solid var(--stroke); color: var(--text-dim); min-height: 38px; }
+  .mchip.on { background: var(--lime); color: var(--lime-ink); border-color: transparent; }
+
   @media (prefers-reduced-motion: reduce) {
     *, .aurora { animation: none !important; transition: none !important; }
     .boot-spin { animation: spin 0.8s linear infinite !important; }
@@ -564,10 +587,48 @@ const CARDIO_TYPES = [
   { name: 'Remo', icon: '🚣' }, { name: 'Escaleras', icon: '🪜' }, { name: 'Caminar', icon: '🚶' },
 ];
 
+/* Músculo principal de cada ejercicio (para volumen por músculo y para el entrenador IA). */
+const MUSCLES = ['pecho', 'espalda', 'hombro', 'bíceps', 'tríceps', 'cuádriceps', 'femoral', 'glúteo', 'gemelo', 'abdomen', 'lumbar', 'antebrazo', 'otro'];
+const EXERCISE_MUSCLE = {
+  'Pullover': 'espalda', 'Remo Low Row Technogym': 'espalda', 'Jalón al Pecho Agarre Neutro': 'espalda', 'Remo Unilateral Polea': 'espalda',
+  'Face Pull Polea Alta': 'hombro', 'Hiperextensiones Lumbar': 'lumbar',
+  'Hack Squat Technogym': 'cuádriceps', 'Prensa 45º Technogym': 'cuádriceps', 'Extensión Cuádriceps Technogym': 'cuádriceps',
+  'Curl Femoral Tumbado': 'femoral', 'Peso Muerto Rumano Mancuerna': 'femoral', 'Zancadas Caminando Mancuerna': 'cuádriceps',
+  'Curl Banco Scott': 'bíceps', 'Curl Polea Baja Cuerda': 'bíceps', 'Curl Martillo Mancuerna': 'bíceps',
+  'Fondos en Máquina': 'tríceps', 'Extensión Tríceps Polea Alta': 'tríceps', 'Rompecráneos Barra EZ': 'tríceps',
+};
+const DEFAULT_MUSCLE_BY_GROUP = { pecho: 'pecho', espalda: 'espalda', pierna: 'cuádriceps', hombro: 'hombro', brazo: 'bíceps', Abs: 'abdomen', Gemelo: 'gemelo' };
+ROUTINES.forEach(r => r.exercises.forEach(e => { e.muscle = e.muscle || EXERCISE_MUSCLE[e.name] || DEFAULT_MUSCLE_BY_GROUP[r.key] || 'otro'; }));
+Object.entries(COMPLEMENTS).forEach(([k, c]) => c.exercises.forEach(e => { e.muscle = e.muscle || EXERCISE_MUSCLE[e.name] || DEFAULT_MUSCLE_BY_GROUP[k] || 'otro'; }));
+
+/* Motivos de "No lo hice". */
+const SKIP_REASONS = [
+  ['maquina_ocupada', 'Máquina ocupada', '🔒'], ['dolor', 'Dolor o molestia', '🩹'], ['tiempo', 'Falta de tiempo', '⏱'],
+  ['cansancio', 'Cansancio', '🔋'], ['otro', 'Otro motivo', '💬'],
+];
+const SKIP_LABEL = { ...Object.fromEntries(SKIP_REASONS.map(([k, l]) => [k, l])), sin_registrar: 'Sin series registradas' };
+const EX_STATUSES = ['done', 'skipped', 'extra', 'substituted'];
+
 const MAX_WEEK = 8;          // bloque de acumulación de 8 semanas
 const POST_CARDIO_MIN = 40;  // cardio post-entreno por defecto
 const ROUTINE_BY_KEY = Object.fromEntries(ROUTINES.map(r => [r.key, r]));
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
+
+/* ---------- Catálogo de ejercicios (rutinas + complementos + los que crees tú) ---------- */
+const normName = (s) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+const nameKey = (s) => normName(s).toLowerCase();
+const BASE_CATALOG = (() => {
+  const m = new Map();
+  const groups = [...ROUTINES.map(r => ({ group: r.name, list: r.exercises })), ...Object.values(COMPLEMENTS).map(c => ({ group: c.name, list: c.exercises }))];
+  groups.forEach(g => g.list.forEach(e => { const k = nameKey(e.name); if (!m.has(k)) m.set(k, { name: e.name, muscle: e.muscle, group: g.group, custom: false, def: e }); }));
+  return [...m.values()];
+})();
+function buildCatalog(custom) {
+  const m = new Map(BASE_CATALOG.map(e => [nameKey(e.name), e]));
+  (custom || []).forEach(e => { const k = nameKey(e.name); if (k && !m.has(k)) m.set(k, { name: e.name, muscle: e.muscle, group: 'Mis ejercicios', custom: true }); });
+  return [...m.values()];
+}
+function findCatalog(name, custom) { const k = nameKey(name); return buildCatalog(custom).find(e => nameKey(e.name) === k) || null; }
 
 /* ============================================================
    PERSISTENCIA
@@ -590,12 +651,46 @@ function readJSON(key) {
 const clampWeek = (w) => Math.max(1, Math.min(MAX_WEEK, parseInt(w, 10) || 1));
 
 /* Normaliza cualquier versión de datos (v1 de ironlog, backups importados…) al formato actual. */
+/* Ejercicio dentro de una sesión guardada → formato v3 (id, estado, músculo y objetivo copiados). */
+function normalizeSessionExercise(x, entry, custom) {
+  const sets = (Array.isArray(x.sets) ? x.sets : []).filter(s => s && typeof s === 'object');
+  const anyDone = sets.some(s => s.done);
+  const status = EX_STATUSES.includes(x.status) ? x.status : (anyDone ? 'done' : 'skipped');
+  const name = normName(x.name) || 'Ejercicio';
+  const cat = findCatalog(name, custom);
+  const out = {
+    ...x, id: x.id ? String(x.id) : uid(), name, status,
+    muscle: MUSCLES.includes(x.muscle) ? x.muscle : (cat ? cat.muscle : null),
+    skipReason: status === 'skipped' ? (x.skipReason || 'sin_registrar') : null,
+    substitutedFor: status === 'substituted' ? (x.substitutedFor || null) : null,
+    sets: status === 'skipped' ? [] : sets,
+  };
+  if (!out.target && cat && cat.def) {
+    const p = planForWeek(cat.def, entry.week);
+    out.target = { series: cat.def.series, reps: cat.def.reps, rir: cat.def.rir, plan: p && p.exact ? p.str : null };
+  }
+  return out;
+}
+function sanitizeCustomExercises(list) {
+  const seen = new Set(BASE_CATALOG.map(e => nameKey(e.name)));
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(e => {
+    if (!e || typeof e !== 'object') return;
+    const name = normName(e.name), k = nameKey(name);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    out.push({ id: e.id ? String(e.id) : uid(), name, muscle: MUSCLES.includes(e.muscle) ? e.muscle : 'otro', createdAt: Number(e.createdAt) || Date.now() });
+  });
+  return out;
+}
+
 function migrate(raw) {
-  const s = { v: 2, week: 1, name: DEFAULT_NAME, settings: { ...DEFAULT_SETTINGS }, log: [] };
+  const s = { v: 3, week: 1, name: DEFAULT_NAME, settings: { ...DEFAULT_SETTINGS }, customExercises: [], log: [] };
   if (!raw || typeof raw !== 'object') return s;
   s.week = clampWeek(raw.week);
   if (typeof raw.name === 'string' && raw.name.trim()) s.name = raw.name.trim().slice(0, 24);
   if (raw.settings && typeof raw.settings === 'object') s.settings = { ...s.settings, ...raw.settings };
+  s.customExercises = sanitizeCustomExercises(raw.customExercises);
 
   const seen = new Set();
   const out = [];
@@ -616,10 +711,12 @@ function migrate(raw) {
     if (entry.type === 'fuerza') {
       if (entry.cardio === true) entry.cardio = { type: 'Post-entreno', duration: POST_CARDIO_MIN, distance: null };
       else if (!entry.cardio || typeof entry.cardio !== 'object') entry.cardio = null;
-      entry.exercises = Array.isArray(entry.exercises) ? entry.exercises.map(x => ({ ...x, sets: Array.isArray(x.sets) ? x.sets : [] })) : [];
+      entry.week = clampWeek(entry.week);
+      entry.exercises = Array.isArray(entry.exercises)
+        ? entry.exercises.filter(x => x && typeof x === 'object').map(x => normalizeSessionExercise(x, entry, s.customExercises))
+        : [];
       entry.volume = Number(entry.volume) || 0;
       entry.totalSets = Number(entry.totalSets) || 0;
-      entry.week = clampWeek(entry.week);
       if (!entry.routineKey) { const r = ROUTINES.find(x => x.name === entry.routine); if (r) entry.routineKey = r.key; }
     }
     if (entry.type === 'cardio') {
@@ -648,6 +745,8 @@ function saveStore(s) {
 function loadDraft() {
   const d = readJSON(DRAFT_KEY);
   if (!d || !ROUTINE_BY_KEY[d.routineKey] || !Array.isArray(d.exList) || !d.exList.length) return null;
+  d.exList = d.exList.filter(e => e && Array.isArray(e.sets)).map(e => ({ status: 'pending', id: uid(), ...e }));
+  if (!d.exList.length) return null;
   d.idx = Math.max(0, Math.min(d.exList.length - 1, d.idx | 0));
   d.stage = d.stage === 'finish' ? 'finish' : 'workout';
   return d;
@@ -796,7 +895,7 @@ function exerciseHistory(log, name) {
   return out;
 }
 function findPRs(log, exList) {
-  return exList.map(e => {
+  return exList.filter(e => e.status !== 'skipped').map(e => {
     const cur = bestOfSets(e.sets);
     if (!cur) return null;
     const hist = exerciseHistory(log, e.name);
@@ -823,7 +922,7 @@ function buildDraft(routine, complement, cardio, week, log) {
       const repsNum = src && /^\d+$/.test(src.reps) ? src.reps : '';
       return { kg: src ? String(src.kg || '') : '', reps: repsNum, done: false, hint: src && !repsNum && src.reps ? src.reps : '' };
     });
-    return { name: e.name, group: e.group, reps: e.reps, series: e.series, rir: e.rir, note: e.note,
+    return { id: uid(), status: 'pending', name: e.name, group: e.group, muscle: e.muscle, reps: e.reps, series: e.series, rir: e.rir, note: e.note,
       plan: plan ? { str: plan.str, week: plan.week, exact: plan.exact } : null, last, sets };
   });
   return {
@@ -844,16 +943,48 @@ function parseCardio(d) {
   return { value: { type: d.type, duration, distance } };
 }
 
+/* Series de un ejercicio del catálogo (puntual o sustituto), rellenadas con la última vez que lo hiciste. */
+function exerciseFromCatalog(item, log, nSets) {
+  const last = lastForExercise(log, item.name);
+  const count = nSets || (last ? last.sets.length : 3) || 3;
+  const sets = Array.from({ length: count }, (_, i) => {
+    const l = last && last.sets[i];
+    return { kg: l ? String(l.kg || '') : '', reps: l && /^\d+$/.test(l.reps) ? l.reps : '', done: false, hint: '' };
+  });
+  return { name: item.name, muscle: item.muscle || null, last, sets };
+}
+const isSkipped = (e) => e.status === 'skipped';
+function draftProgress(d) {
+  let done = 0, total = 0;
+  d.exList.forEach(e => { if (isSkipped(e)) return; total += e.sets.length; done += e.sets.filter(s => s.done).length; });
+  return { done, total };
+}
+
 function buildSession(draft, cardioValue) {
   const routine = ROUTINE_BY_KEY[draft.routineKey];
   let volume = 0, completed = 0;
-  const exercises = draft.exList.map(e => ({
-    name: e.name, group: e.group,
-    sets: e.sets.map(s => {
+  const exercises = [];
+  draft.exList.forEach(e => {
+    // Si se sustituyó y luego se marcó "No lo hice", lo que no se hizo es el original.
+    const src = isSkipped(e) && e.original ? e.original : e;
+    const doneSets = e.sets.filter(s => s.done);
+    let status = isSkipped(e) ? 'skipped' : e.status === 'extra' ? 'extra' : e.status === 'substituted' ? 'substituted' : 'done';
+    let skipReason = isSkipped(e) ? (e.skipReason || 'otro') : null;
+    if (status !== 'skipped' && !doneSets.length) {
+      if (status === 'extra') return; // un puntual sin series no se guarda
+      status = 'skipped'; skipReason = 'sin_registrar';
+    }
+    const sets = status === 'skipped' ? [] : e.sets.map(s => {
       if (s.done) { volume += num(s.kg) * int(s.reps); completed++; }
       return { kg: s.kg, reps: s.reps, done: s.done };
-    }),
-  }));
+    });
+    exercises.push({
+      id: e.id || uid(), name: src.name, group: src.group || null, muscle: src.muscle || null,
+      status, skipReason, substitutedFor: status === 'substituted' ? (e.substitutedFor || null) : null,
+      target: status === 'extra' ? null : { series: src.series ?? null, reps: src.reps || null, rir: src.rir ?? null, plan: src.plan && src.plan.exact ? src.plan.str : null },
+      sets,
+    });
+  });
   const end = draft.endedAt || Date.now();
   return {
     type: 'fuerza', routine: routine.name, routineKey: routine.key, icon: routine.icon, complement: draft.complement || null,
@@ -967,6 +1098,103 @@ function Sheet({ onClose, children, label }) {
   );
 }
 
+/* Buscador del catálogo: elegir un ejercicio o crear uno nuevo (con su músculo). */
+function ExercisePicker({ title, subtitle, catalog, exclude, onPick, onCreate, onClose }) {
+  const [q, setQ] = useState('');
+  const [muscle, setMuscle] = useState(null);
+  const k = nameKey(q);
+  const ex = exclude ? nameKey(exclude) : null;
+  const list = catalog.filter(e => nameKey(e.name) !== ex && (!k || nameKey(e.name).includes(k) || e.muscle === k));
+  const exact = catalog.some(e => nameKey(e.name) === k);
+  const groups = MUSCLES.map(m => ({ m, items: list.filter(e => (e.muscle || 'otro') === m) })).filter(g => g.items.length);
+  const create = () => { const item = { name: normName(q), muscle }; onCreate(item); onPick(item); };
+  const createBox = k && !exact ? (
+        <div className="glass" style={{ borderRadius: 18, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Crear «{normName(q)}»</div>
+          <div className="hist-date" style={{ marginBottom: 10 }}>Elige el músculo principal</div>
+          <div className="chip-row">
+            {MUSCLES.map(m => (
+              <button key={m} className={`mchip press ${muscle === m ? 'on' : ''}`} aria-pressed={muscle === m} onClick={() => setMuscle(m)}>{m}</button>
+            ))}
+          </div>
+          <button className="btn-primary press" style={{ marginTop: 12, padding: 14 }} disabled={!muscle} onClick={create}>Crear y usar</button>
+        </div>
+  ) : null;
+  return (
+    <Sheet onClose={onClose} label={title}>
+      <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+      {subtitle && <div className="hist-date" style={{ marginBottom: 12 }}>{subtitle}</div>}
+      <div className="field" style={{ marginTop: subtitle ? 0 : 12 }}>
+        <input type="text" placeholder="Buscar o escribir uno nuevo" aria-label="Buscar ejercicio" value={q} maxLength={60}
+          onChange={e => { setQ(e.target.value); setMuscle(null); }} />
+      </div>
+      {groups.length === 0 && createBox}
+      {groups.length === 0 && !k && <div className="empty">No hay ejercicios en el catálogo.</div>}
+      {groups.map(g => (
+        <div key={g.m}>
+          <div className="month-head" style={{ margin: '12px 4px 8px' }}>{g.m}</div>
+          {g.items.map(e => (
+            <button key={e.name} className="pick-row press" onClick={() => onPick({ name: e.name, muscle: e.muscle })}>
+              <span style={{ fontWeight: 600 }}>{e.name}</span>
+              <span className="faint" style={{ fontSize: 12 }}>{e.group}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+      {groups.length > 0 && createBox && <div style={{ marginTop: 14 }}>{createBox}</div>}
+    </Sheet>
+  );
+}
+
+function SkipSheet({ exName, onPick, onClose }) {
+  return (
+    <Sheet onClose={onClose} label="¿Por qué no lo has hecho?">
+      <div style={{ fontSize: 18, fontWeight: 700 }}>¿Por qué no lo has hecho?</div>
+      <div className="hist-date" style={{ marginBottom: 14 }}>{exName} · queda registrado como no realizado</div>
+      {SKIP_REASONS.map(([key, label, ico]) => (
+        <button key={key} className="pick-row press" onClick={() => onPick(key)}>
+          <span style={{ fontWeight: 600 }}><span aria-hidden="true" style={{ marginRight: 10 }}>{ico}</span>{label}</span>
+        </button>
+      ))}
+    </Sheet>
+  );
+}
+
+/* Fila de un ejercicio en el resumen/detalle, con su estado. */
+function SessionExRow({ e, n }) {
+  const skipped = e.status === 'skipped';
+  const done = (e.sets || []).filter(s => s && s.done);
+  return (
+    <div className={`fin-ex glass ${skipped ? 'is-skip' : ''}`} style={{ borderRadius: 18 }}>
+      <div className="fin-ex-n">{skipped ? '–' : n}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 600 }}>
+          {e.name}
+          {e.status === 'extra' && <span className="tag extra">Puntual</span>}
+          {e.status === 'substituted' && <span className="tag sub">Sustituto</span>}
+        </div>
+        <div className="dim" style={{ fontSize: 12.5, marginTop: 2 }}>
+          {skipped ? `No realizado · ${SKIP_LABEL[e.skipReason] || 'Sin motivo'}`
+            : done.length ? done.map(s => `${s.kg || '–'}×${s.reps || '–'}`).join('  ·  ') : 'Sin series completadas'}
+        </div>
+        {e.status === 'substituted' && e.substitutedFor && <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>En lugar de {e.substitutedFor}</div>}
+      </div>
+    </div>
+  );
+}
+function sessionCounts(exercises) {
+  const c = { done: 0, skipped: 0, extra: 0, substituted: 0 };
+  (exercises || []).forEach(e => { if (c[e.status] != null) c[e.status]++; });
+  return c;
+}
+function countsText(c) {
+  const parts = [`${c.done + c.substituted} hechos`];
+  if (c.skipped) parts.push(`${c.skipped} no ${c.skipped === 1 ? 'hecho' : 'hechos'}`);
+  if (c.substituted) parts.push(`${c.substituted} ${c.substituted === 1 ? 'sustituido' : 'sustituidos'}`);
+  if (c.extra) parts.push(`${c.extra} ${c.extra === 1 ? 'puntual' : 'puntuales'}`);
+  return parts.join(' · ');
+}
+
 /* ============================================================
    HOME
    ============================================================ */
@@ -1003,8 +1231,7 @@ function WeekStrip({ log }) {
 function HomeScreen({ store, stats, draft, nextRoutine, onFuerza, onCardio, onDescanso, onResume, onDiscard, goHistory, onOpen }) {
   const recent = [...store.log].reverse().slice(0, 3);
   const draftRoutine = draft ? ROUTINE_BY_KEY[draft.routineKey] : null;
-  const draftDone = draft ? draft.exList.reduce((a, e) => a + e.sets.filter(s => s.done).length, 0) : 0;
-  const draftTotal = draft ? draft.exList.reduce((a, e) => a + e.sets.length, 0) : 0;
+  const { done: draftDone, total: draftTotal } = draft ? draftProgress(draft) : { done: 0, total: 0 };
   return (
     <div className="screen-scroll screen-anim">
       <div className="brand-bar">
@@ -1208,13 +1435,17 @@ function RestBar({ rest, now, onAdjust, onSkip }) {
   );
 }
 
-function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
+function WorkoutScreen({ draft, setDraft, settings, log, catalog, onCreateExercise, onFinish, onPause }) {
   const routine = ROUTINE_BY_KEY[draft.routineKey];
   const { exList, idx } = draft;
   const ex = exList[idx];
   const total = exList.length;
   const scrollRef = useRef(null);
   const [rest, setRest] = useState(null); // { end, total, fired }
+  const [panel, setPanel] = useState(null); // 'skip' | 'sub' | 'extra'
+  const [armRemove, setArmRemove] = useState(false);
+  useEffect(() => { setArmRemove(false); }, [idx]);
+  useEffect(() => { if (!armRemove) return; const t = setTimeout(() => setArmRemove(false), 3000); return () => clearTimeout(t); }, [armRemove]);
   const now = useNow(rest ? 250 : 30000);
   useWakeLock();
 
@@ -1255,6 +1486,44 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
   });
   const removeSet = () => patchEx(e => (e.sets.length > 1 ? { ...e, sets: e.sets.slice(0, -1) } : e));
 
+  /* ---- No lo hice / sustituir / puntual ---- */
+  // Si estaba sustituido, lo que no se hizo es el ejercicio original.
+  const skip = (reason) => {
+    buzz(15); setRest(null);
+    patchEx(e => { const base = e.original ? { ...e.original } : e; return { ...base, status: 'skipped', skipReason: reason, prevStatus: base.status }; });
+    setPanel(null);
+  };
+  const unskip = () => { buzz(); patchEx(e => ({ ...e, status: e.prevStatus || 'pending', skipReason: null, prevStatus: undefined })); };
+  const substitute = (item) => {
+    buzz(15);
+    patchEx(e => {
+      const original = e.original || e;
+      if (nameKey(item.name) === nameKey(original.name)) return { ...original };
+      const fresh = exerciseFromCatalog(item, log, original.sets.length);
+      return { ...original, ...fresh, id: e.id, status: 'substituted', substitutedFor: original.name, note: '', plan: null, original };
+    });
+    setPanel(null);
+  };
+  const undoSubstitute = () => { buzz(); patchEx(e => (e.original ? { ...e.original } : e)); };
+  const addExtra = (item) => {
+    buzz(15);
+    setDraft(d => ({
+      ...d, idx: d.exList.length,
+      exList: [...d.exList, { id: uid(), status: 'extra', group: 'Puntual', reps: '', series: null, rir: null, note: '', plan: null, ...exerciseFromCatalog(item, log) }],
+    }));
+    setPanel(null);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+  const removeExtra = () => {
+    if (!armRemove) { setArmRemove(true); return; }
+    buzz(15);
+    setDraft(d => {
+      const exList = d.exList.filter((_, i) => i !== d.idx);
+      return { ...d, exList, idx: Math.max(0, Math.min(d.idx, exList.length - 1)) };
+    });
+    setArmRemove(false);
+  };
+
   const go = (n) => {
     if (n < 0 || n >= total || n === idx) return;
     buzz(8);
@@ -1262,8 +1531,8 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   };
 
-  const doneSets = exList.reduce((a, e) => a + e.sets.filter(s => s.done).length, 0);
-  const totalSets = exList.reduce((a, e) => a + e.sets.length, 0);
+  const { done: doneSets, total: totalSets } = draftProgress(draft);
+  const skipped = isSkipped(ex);
   const elapsed = Math.max(0, Math.floor((now - draft.startedAt) / 60000));
 
   const finish = () => {
@@ -1286,32 +1555,65 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {routine.name}{draft.complement ? ` + ${COMPLEMENTS[draft.complement].name}` : ''} · Sem {draft.week}</div>
           </div>
-          {!rest && <button className="timer-btn press" onClick={() => startRest(restSecondsFor(ex.reps))} aria-label="Iniciar descanso">⏱ {fmtClock(restSecondsFor(ex.reps))}</button>}
+          {!rest && !skipped && <button className="timer-btn press" onClick={() => startRest(restSecondsFor(ex.reps))} aria-label="Iniciar descanso">⏱ {fmtClock(restSecondsFor(ex.reps))}</button>}
         </div>
 
         <div className="ex-dots" role="tablist" aria-label="Ejercicios">
           {exList.map((e, i) => {
             const d = e.sets.filter(s => s.done).length;
+            const sk = isSkipped(e);
+            const state = sk ? 'no realizado' : `${d}/${e.sets.length} series`;
             return (
-              <button key={i} role="tab" aria-selected={i === idx} aria-label={`${i + 1}. ${e.name}: ${d}/${e.sets.length} series`}
-                className={`ex-dot press ${i === idx ? 'cur' : d === e.sets.length ? 'full' : d ? 'part' : ''}`} onClick={() => go(i)}>{i + 1}</button>
+              <button key={e.id || i} role="tab" aria-selected={i === idx} aria-label={`${i + 1}. ${e.name}: ${state}`}
+                className={`ex-dot press ${i === idx ? 'cur' : sk ? 'skip' : d === e.sets.length ? 'full' : d ? 'part' : ''} ${e.status === 'extra' ? 'extra' : ''}`} onClick={() => go(i)}>{e.status === 'extra' ? '+' : i + 1}</button>
             );
           })}
         </div>
 
-        {ex.group !== routine.name && <div className="pill" style={{ marginBottom: 12, color: 'var(--coral-b)', borderColor: 'rgba(251,146,60,0.3)' }}>★ Complemento · {ex.group}</div>}
+        {ex.status === 'extra'
+          ? <div className="pill" style={{ marginBottom: 12, color: 'var(--cyan-b)', borderColor: 'rgba(34,211,238,0.3)' }}>＋ Ejercicio puntual · no cambia tu rutina</div>
+          : ex.group !== routine.name && <div className="pill" style={{ marginBottom: 12, color: 'var(--coral-b)', borderColor: 'rgba(251,146,60,0.3)' }}>★ Complemento · {ex.group}</div>}
 
-        <div className="h-title" style={{ marginBottom: 14 }}>{ex.name}</div>
+        <div className="h-title" style={{ marginBottom: 12, opacity: skipped ? 0.5 : 1, textDecoration: skipped ? 'line-through' : 'none' }}>{ex.name}</div>
 
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginBottom: 16 }}>
-          <span className="pill">🎯 {ex.reps} reps</span>
-          <span className="pill">💪 {ex.series} series</span>
-          <span className="pill">🔋 RIR {ex.rir}</span>
-        </div>
+        {ex.status === 'substituted' && (
+          <div className="sub-box">
+            <div style={{ minWidth: 0 }}><div className="eyebrow">⇄ Sustituye a</div><div style={{ fontSize: 14, fontWeight: 600, marginTop: 3 }}>{ex.substitutedFor}</div></div>
+            {!skipped && <button className="chip-btn press" onClick={undoSubstitute}>Volver</button>}
+          </div>
+        )}
 
-        {ex.note && <div className="note-chip" style={{ marginBottom: 16 }}>⚡ {ex.note}</div>}
+        {!skipped && (
+          <div className="ex-actions">
+            <button className="ex-act press" onClick={() => setPanel('sub')}>⇄ Sustituir</button>
+            {ex.status === 'extra'
+              ? <button className={`ex-act press ${armRemove ? 'danger' : ''}`} onClick={removeExtra}>{armRemove ? '¿Seguro? Toca otra vez' : '🗑 Quitar'}</button>
+              : <button className="ex-act press" onClick={() => setPanel('skip')}>⏭ No lo hice</button>}
+          </div>
+        )}
 
-        {(ex.plan || ex.last) && (
+        {!skipped && (ex.reps || ex.series || ex.rir != null) && (
+          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginBottom: 16 }}>
+            {ex.reps && <span className="pill">🎯 {ex.reps} reps</span>}
+            {ex.series && <span className="pill">💪 {ex.series} series</span>}
+            {ex.rir != null && <span className="pill">🔋 RIR {ex.rir}</span>}
+          </div>
+        )}
+
+        {!skipped && ex.note && <div className="note-chip" style={{ marginBottom: 16 }}>⚡ {ex.note}</div>}
+
+        {skipped && (
+          <BentoCard className="skip-card" style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 30 }} aria-hidden="true">⏭</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>No realizado</div>
+              <div className="hist-date">{SKIP_LABEL[ex.skipReason] || 'Sin motivo'} · no cuenta como 0 en tu progreso</div>
+            </div>
+            <button className="chip-btn lime press" onClick={unskip}>Deshacer</button>
+          </BentoCard>
+        )}
+
+        {!skipped && (ex.plan || ex.last) && (
           <div className="ref-box" style={{ marginBottom: 20 }}>
             {ex.plan && (
               <div>
@@ -1328,7 +1630,7 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
           </div>
         )}
 
-        <BentoCard style={{ marginBottom: 18 }}>
+        {!skipped && <BentoCard style={{ marginBottom: 18 }}>
           <div className="eyebrow" style={{ marginBottom: 14 }}>Registra tus series</div>
           {ex.sets.map((s, si) => (
             <div className={`set-row ${s.done ? 'done' : ''}`} key={si}>
@@ -1350,7 +1652,7 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
             <button className="set-tool press" onClick={removeSet} disabled={ex.sets.length <= 1}>− Quitar serie</button>
             <button className="set-tool press" onClick={addSet}>+ Añadir serie</button>
           </div>
-        </BentoCard>
+        </BentoCard>}
 
         <div className="nav-arrows">
           <button className="nav-arrow press" disabled={idx === 0} onClick={() => go(idx - 1)}>← Anterior</button>
@@ -1361,6 +1663,7 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
         {idx < total - 1 && (
           <button className="btn-ghost press" style={{ marginTop: 12 }} onClick={finish}>Terminar entreno ahora</button>
         )}
+        <button className="btn-ghost press" style={{ marginTop: 12, borderStyle: 'dashed' }} onClick={() => setPanel('extra')}>＋ Añadir ejercicio puntual</button>
 
         {draft.cardio && (
           <BentoCard className="hist-item" style={{ marginTop: 18 }}>
@@ -1370,6 +1673,11 @@ function WorkoutScreen({ draft, setDraft, settings, onFinish, onPause }) {
         )}
       </div>
       {rest && <RestBar rest={rest} now={now} onAdjust={adjustRest} onSkip={() => setRest(null)} />}
+      {panel === 'skip' && <SkipSheet exName={ex.name} onPick={skip} onClose={() => setPanel(null)} />}
+      {panel === 'sub' && <ExercisePicker title="Sustituir ejercicio" subtitle={`En lugar de ${(ex.original || ex).name}`} catalog={catalog}
+        exclude={ex.name} onPick={substitute} onCreate={onCreateExercise} onClose={() => setPanel(null)} />}
+      {panel === 'extra' && <ExercisePicker title="Ejercicio puntual" subtitle="Solo para hoy: no se añade a la rutina" catalog={catalog}
+        onPick={addExtra} onCreate={onCreateExercise} onClose={() => setPanel(null)} />}
     </div>
   );
 }
@@ -1455,21 +1763,13 @@ function FinishScreen({ draft, setDraft, log, onSave, onBack, onDiscard }) {
           🏃 Añadir cardio post-entreno</button>
       )}
 
-      <div className="section-head"><h2>Detalle</h2></div>
-      {session.exercises.map((e, i) => {
-        const done = e.sets.filter(s => s.done);
-        return (
-          <BentoCard className="fin-ex" key={i}>
-            <div className="fin-ex-n">{i + 1}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600 }}>{e.name}</div>
-              <div className="dim" style={{ fontSize: 12.5, marginTop: 2 }}>
-                {done.length ? done.map(s => `${s.kg || '–'}×${s.reps || '–'}`).join('  ·  ') : 'Sin series completadas'}
-              </div>
-            </div>
-          </BentoCard>
-        );
-      })}
+      <div className="section-head"><h2>Detalle</h2><span className="dim" style={{ fontSize: 12.5 }}>{countsText(sessionCounts(session.exercises))}</span></div>
+      {session.exercises.map((e, i) => <SessionExRow key={e.id || i} e={e} n={i + 1} />)}
+      {session.exercises.some(e => e.skipReason === 'sin_registrar') && (
+        <div className="faint" style={{ fontSize: 12, margin: '2px 4px 0', lineHeight: 1.45 }}>
+          Los ejercicios sin series marcadas se guardan como no realizados. Si sí los hiciste, vuelve y marca las series con ✓.
+        </div>
+      )}
 
       <div style={{ marginTop: 24 }}>
         <button className="btn-primary press" disabled={!!(cardioRes && cardioRes.error)} onClick={() => onSave(session)}>Guardar y salir</button>
@@ -1526,18 +1826,8 @@ function EntryDetail({ entry, onDelete }) {
             <StatCard value={(entry.volume || 0).toLocaleString('es')} unit="kg" label="Volumen" />
             <StatCard value={`S${entry.week}`} unit="" label="Bloque" color="var(--amber-b)" />
           </div>
-          {entry.exercises.map((e, i) => {
-            const done = (e.sets || []).filter(s => s && s.done);
-            return (
-              <div key={i} className="fin-ex glass" style={{ borderRadius: 18 }}>
-                <div className="fin-ex-n">{i + 1}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{e.name}</div>
-                  <div className="dim" style={{ fontSize: 12.5, marginTop: 2 }}>{done.length ? done.map(s => `${s.kg || '–'}×${s.reps || '–'}`).join('  ·  ') : 'Sin series completadas'}</div>
-                </div>
-              </div>
-            );
-          })}
+          <div className="dim" style={{ fontSize: 12.5, margin: '0 4px 10px' }}>{countsText(sessionCounts(entry.exercises))}</div>
+          {entry.exercises.map((e, i) => <SessionExRow key={e.id || i} e={e} n={i + 1} />)}
           {entry.cardio && (
             <div className="fin-ex glass" style={{ borderRadius: 18 }}>
               <div className="fin-ex-n" aria-hidden="true">🏃</div>
@@ -1624,6 +1914,14 @@ function ProgressScreen({ log }) {
       ...ROUTINES.map(r => ({ name: r.name, icon: r.icon, exercises: r.exercises })),
       ...Object.values(COMPLEMENTS).map(c => ({ name: c.name, icon: c.icon, exercises: c.exercises })),
     ];
+    // Ejercicios puntuales o sustitutos que no están en ninguna rutina.
+    const known = new Set(all.flatMap(g => g.exercises.map(e => nameKey(e.name))));
+    const others = new Map();
+    log.forEach(e => {
+      if (e.type !== 'fuerza') return;
+      (e.exercises || []).forEach(x => { const k = nameKey(x.name); if (x.status !== 'skipped' && !known.has(k) && !others.has(k)) others.set(k, x.name); });
+    });
+    if (others.size) all.push({ name: 'Otros ejercicios', icon: '➕', exercises: [...others.values()].map(name => ({ name })) });
     return all.map(g => ({ ...g, items: g.exercises.map(e => ({ name: e.name, hist: exerciseHistory(log, e.name) })).filter(x => x.hist.length) }))
       .filter(g => g.items.length);
   }, [log]);
@@ -1789,6 +2087,12 @@ function App() {
   const stats = useMemo(() => computeStats(store.log), [store.log]);
   const doneSet = useMemo(() => doneRoutinesForWeek(store.log, store.week), [store.log, store.week]);
   const nextRoutine = ROUTINES.find(r => !doneSet.has(r.key)) || null;
+  const catalog = useMemo(() => buildCatalog(store.customExercises), [store.customExercises]);
+  const addCustomExercise = (item) => setStore(s => {
+    const name = normName(item.name);
+    if (!name || buildCatalog(s.customExercises).some(e => nameKey(e.name) === nameKey(name))) return s;
+    return { ...s, customExercises: [...(s.customExercises || []), { id: uid(), name, muscle: MUSCLES.includes(item.muscle) ? item.muscle : 'otro', createdAt: Date.now() }] };
+  });
 
   const setWeek = (w) => setStore(s => ({ ...s, week: clampWeek(w) }));
   const addSession = (data) => {
@@ -1877,7 +2181,7 @@ function App() {
   const clearData = async () => {
     const ok = await ask({ title: '¿Borrar TODOS los datos?', text: 'Se eliminarán todas las sesiones y el entreno en curso. Te recomendamos exportar antes una copia.', confirm: 'Borrar todo', danger: true });
     if (!ok) return;
-    setStore(s => ({ ...s, week: 1, log: [] })); setDraft(null); showToast('🗑️ Datos borrados');
+    setStore(s => ({ ...s, week: 1, log: [], customExercises: [] })); setDraft(null); showToast('🗑️ Datos borrados');
   };
 
   /* ---- Botón/gesto "atrás" del sistema (Android) ---- */
@@ -1930,7 +2234,8 @@ function App() {
 
       {screen === 'routine' && <RoutineScreen store={store} setWeek={setWeek} onPick={pickRoutine} onBack={() => setScreen('home')} doneSet={doneSet} />}
       {screen === 'complement' && pick && <ComplementScreen routine={pick} onStart={startWorkout} onBack={() => setScreen('routine')} />}
-      {screen === 'workout' && draft && <WorkoutScreen draft={draft} setDraft={setDraft} settings={store.settings} onFinish={finishWorkout} onPause={pauseWorkout} />}
+      {screen === 'workout' && draft && <WorkoutScreen draft={draft} setDraft={setDraft} settings={store.settings}
+        log={store.log} catalog={catalog} onCreateExercise={addCustomExercise} onFinish={finishWorkout} onPause={pauseWorkout} />}
       {screen === 'finish' && draft && <FinishScreen draft={draft} setDraft={setDraft} log={store.log} onSave={saveWorkout} onBack={backToWorkout} onDiscard={discardDraft} />}
       {screen === 'cardio' && <CardioScreen onSave={saveCardio} onBack={() => setScreen('home')} />}
 
